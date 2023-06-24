@@ -172,12 +172,10 @@ fn main_loop() !void {
             defer allocator.free(buf);
             _ = c.rtmidi_get_port_name(midi_in, i, buf.ptr, &len);
             const spanned = std.mem.span(buf.ptr);
-            if (!is_prefixed(spanned)) {
-                if (find(.Input, spanned)) |id| {
-                    is_active[id] = true;
-                } else {
-                    if (try add(.Input, i, spanned)) |id| is_active[id] = true;
-                }
+            if (find(.Input, spanned)) |id| {
+                is_active[id] = true;
+            } else {
+                if (try add(.Input, i, spanned)) |id| is_active[id] = true;
             }
         }
 
@@ -222,7 +220,9 @@ fn main_loop() !void {
 fn find(dev_type: Dev_t, name: [:0]const u8) ?usize {
     // need a special case for ourselves.
     if (dev_type == .Input and std.mem.eql(u8, name, "seamstress_out")) return 1;
+    if (dev_type == .Input and std.mem.eql(u8, name, "seamstress:seamstress_out")) return 1;
     if (dev_type == .Output and std.mem.eql(u8, name, "seamstress_in")) return 0;
+    if (dev_type == .Output and std.mem.eql(u8, name, "seamstress:seamstress_in")) return 0;
     var i: usize = 2;
     while (i < 32) : (i += 1) {
         switch (devices[i].guts) {
@@ -230,11 +230,17 @@ fn find(dev_type: Dev_t, name: [:0]const u8) ?usize {
                 if (dev_type != .Input) continue;
                 const n = devices[i].name orelse continue;
                 if (std.mem.eql(u8, name, n)) return i;
+                const prefixed_name = std.fmt.allocPrint(allocator, "seamstress:{s}", .{n}) catch continue;
+                if (std.mem.eql(u8, name, prefixed_name)) return i;
+                defer allocator.free(prefixed_name);
             },
             .Output => {
                 if (dev_type != .Output) continue;
                 const n = devices[i].name orelse continue;
                 if (std.mem.eql(u8, name, n)) return i;
+                const prefixed_name = std.fmt.allocPrint(allocator, "seamstress:{s}", .{n}) catch continue;
+                if (std.mem.eql(u8, name, prefixed_name)) return i;
+                defer allocator.free(prefixed_name);
             },
         }
     }
