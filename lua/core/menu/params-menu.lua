@@ -165,9 +165,9 @@ m.redraw = function()
           screen.text(params:get_name(p) .. " >")
         else
           screen.text(params:get_name(p))
-          screen.move_rel(127,0)
+          screen.move_rel(127, 0)
           screen.text_right(params:string(p, params:is_number(p) and 1 or 0.001))
-          screen.move_rel(-127,0)
+          screen.move_rel(-127, 0)
         end
       end
     end
@@ -202,6 +202,9 @@ m.mouse = function(x, y)
 end
 
 m.click = function(x, y, state, button)
+end
+
+m.scroll = function(x, y)
 end
 
 return m

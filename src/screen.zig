@@ -51,6 +51,13 @@ pub fn move_rel(x: c_int, y: c_int) void {
     gui.y += y;
 }
 
+pub fn get_pos() Size {
+    return .{
+        .w = windows[current].x,
+        .h = windows[current].y,
+    };
+}
+
 pub fn refresh() void {
     c.SDL_RenderPresent(windows[current].render);
 }
@@ -495,6 +502,19 @@ pub fn check() void {
                         .y = y / zoom,
                         .button = ev.button.button,
                         .window = ev.button.windowID,
+                    },
+                };
+                events.post(event);
+            },
+            c.SDL_MOUSEWHEEL => {
+                const flipped = ev.wheel.direction == c.SDL_MOUSEWHEEL_NORMAL;
+                const x = ev.wheel.preciseX;
+                const y = if (flipped) -1 * ev.wheel.preciseY else ev.wheel.preciseY;
+                const event = .{
+                    .Screen_Mouse_Scroll = .{
+                        .x = x,
+                        .y = y,
+                        .window = ev.window.windowID,
                     },
                 };
                 events.post(event);

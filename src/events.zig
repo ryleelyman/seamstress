@@ -22,6 +22,7 @@ pub const Event = enum {
     Screen_Key,
     Screen_Mouse_Motion,
     Screen_Mouse_Click,
+    Screen_Mouse_Scroll,
     Screen_Check,
     Screen_Resized,
     Metro,
@@ -45,6 +46,7 @@ pub const Data = union(Event) {
     Screen_Key: event_screen_key,
     Screen_Mouse_Motion: event_screen_mouse_motion,
     Screen_Mouse_Click: event_screen_mouse_click,
+    Screen_Mouse_Scroll: event_screen_mouse_scroll,
     Screen_Check: void,
     Screen_Resized: event_screen_resized,
     Metro: event_metro,
@@ -120,6 +122,12 @@ const event_screen_mouse_click = struct {
     y: f64 = undefined,
     state: bool = undefined,
     button: u8 = undefined,
+    window: usize = undefined,
+};
+
+const event_screen_mouse_scroll = struct {
+    x: f64 = undefined,
+    y: f64 = undefined,
     window: usize = undefined,
 };
 
@@ -351,6 +359,7 @@ fn handle(event: *Data) !void {
         .Screen_Key => |e| try spindle.screen_key(e.sym, e.mod, e.repeat, e.state, e.window),
         .Screen_Mouse_Motion => |e| try spindle.screen_mouse(e.x, e.y, e.window),
         .Screen_Mouse_Click => |e| try spindle.screen_click(e.x, e.y, e.state, e.button, e.window),
+        .Screen_Mouse_Scroll => |e| try spindle.screen_scroll(e.x, e.y, e.window),
         .Screen_Check => screen.check(),
         .Screen_Resized => |e| try spindle.screen_resized(e.w, e.h, e.window),
         .Metro => |e| try spindle.metro_event(e.id, e.stage),

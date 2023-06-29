@@ -63,6 +63,7 @@ pub fn init(prefix: []const u8, config: []const u8, alloc_pointer: std.mem.Alloc
     register_seamstress("screen_circle_fill", ziglua.wrap(screen_circle_fill));
     register_seamstress("screen_move", ziglua.wrap(screen_move));
     register_seamstress("screen_move_rel", ziglua.wrap(screen_move_rel));
+    register_seamstress("screen_get_pos", ziglua.wrap(screen_get_pos));
     register_seamstress("screen_get_size", ziglua.wrap(screen_get_size));
     register_seamstress("screen_get_text_size", ziglua.wrap(screen_get_text_size));
 
@@ -423,6 +424,19 @@ fn screen_move_rel(l: *Lua) i32 {
     const y = l.checkInteger(2);
     screen.move_rel(@intCast(x), @intCast(y));
     return 0;
+}
+
+/// moves the current location on the screen relative to the current location.
+// users should use `screen.get_pos` instead
+// @treturn integer x x-coordinate
+// @treturn integer y y-coordinate
+// @see screen.get_pos
+// @function screen_get_pos
+fn screen_get_pos(l: *Lua) i32 {
+    check_num_args(l, 2);
+    const pos = screen.get_pos();
+    screen.move_rel(pos.w + 1, pos.h + 1);
+    return 2;
 }
 
 /// draws a single pixel.
@@ -973,6 +987,14 @@ pub fn screen_click(x: f64, y: f64, state: bool, button: u8, window: usize) !voi
     lvm.pushInteger(button);
     lvm.pushInteger(@intCast(window));
     try docall(&lvm, 5, 0);
+}
+
+pub fn screen_scroll(x: f64, y: f64, window: usize) !void {
+    try push_lua_func("screen", "scroll");
+    lvm.pushNumber(x);
+    lvm.pushNumber(y);
+    lvm.pushInteger(@intCast(window));
+    try docall(&lvm, 3, 0);
 }
 
 pub fn screen_resized(w: i32, h: i32, window: usize) !void {
