@@ -4,13 +4,15 @@ const events = @import("events.zig");
 const logger = std.log.scoped(.socket);
 var allocator: std.mem.Allocator = undefined;
 var listener: std.net.StreamServer = undefined;
+const PollEnum = enum { Addr };
+var watcher: std.io.Poller(PollEnum) = undefined;
 var pid: std.Thread = undefined;
 var quit = false;
 
 pub fn init(alloc_pointer: std.mem.Allocator, port: u16) !void {
     quit = false;
     allocator = alloc_pointer;
-    const addr = try std.net.Address.resolveIp("127.0.0.1", port);
+    const addr = try std.net.Address.parseIp4("127.0.0.1", port);
     listener = std.net.StreamServer.init(.{});
     try listener.listen(addr);
     pid = try std.Thread.spawn(.{}, loop, .{});
@@ -18,6 +20,8 @@ pub fn init(alloc_pointer: std.mem.Allocator, port: u16) !void {
 
 pub fn deinit() void {
     quit = true;
+    // watcher.deinit();
+    listener.close();
     pid.join();
     listener.deinit();
 }
@@ -27,54 +31,25 @@ const ReceiveError = error{
     BufferExceeded,
 };
 
-fn receive(stream: *std.net.Stream) ![:0]const u8 {
-    var recv_buf: [8196]u8 = undefined;
-    var recv_total: usize = 0;
-    while (stream.read(recv_buf[recv_total..])) |recv_len| {
-        if (recv_len == 0) {
-            if (recv_total == 0) return ReceiveError.EOF;
-            break;
-        }
-        recv_total += recv_len;
-        if (std.mem.containsAtLeast(
-            u8,
-            recv_buf[0..recv_total],
-            1,
-            "\r\n\r\n",
-        )) break;
-
-        if (recv_total >= recv_buf.len) return ReceiveError.BufferExceeded;
-    } else |err| return err;
-
-    return allocator.dupeZ(u8, recv_buf[0..recv_total]) catch @panic("OOM!");
-}
-
 pub fn loop() !void {
     pid.setName("socket_thread") catch {};
+    // watcher = std.io.poll(allocator, PollEnum, .{ .Addr = listener.sockfd.? });
     while (!quit) {
-        var fds: [1]std.os.pollfd = .{
-            .{
-                .fd = listener.sockfd.?,
-                .events = std.os.POLL.IN,
-                .revents = 0,
-            },
-        };
-        const ready = try std.os.poll(&fds, 1000);
-        if (ready == 0) continue;
+        // const data = try watcher.poll();
+        // if (!data) continue;
         const connection = listener.accept() catch |err| {
             logger.err("connection error: {}", .{err});
             continue;
         };
         logger.info("new connection: {}", .{connection.address.in.getPort()});
         defer connection.stream.close();
-        var stream = connection.stream;
-        const line = receive(&stream) catch |err| {
-            logger.err("receive error: {}", .{err});
-            continue;
-        };
+        var stream_reader = connection.stream.reader();
+        const line = try stream_reader.readAllAlloc(allocator, 1000);
+        defer allocator.free(line);
+        const linez = allocator.dupeZ(u8, line) catch @panic("OOM!");
         const event = .{
             .Exec_Code_Line = .{
-                .line = line,
+                .line = linez,
             },
         };
         events.post(event);

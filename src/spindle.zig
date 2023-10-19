@@ -18,10 +18,11 @@ const Lua = ziglua.Lua;
 var lvm: Lua = undefined;
 var allocator: std.mem.Allocator = undefined;
 const logger = std.log.scoped(.spindle);
-var stdout = std.io.getStdOut().writer();
+var stdout: std.fs.File.Writer = undefined;
 var timer: std.time.Timer = undefined;
 
 pub fn init(prefix: []const u8, config: []const u8, time: std.time.Timer, alloc_pointer: std.mem.Allocator) !void {
+    stdout = std.io.getStdOut().writer();
     timer = time;
     allocator = alloc_pointer;
 

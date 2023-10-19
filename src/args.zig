@@ -7,14 +7,14 @@ pub var socket_port: [:0]const u8 = "8888";
 pub var width: [:0]const u8 = "256";
 pub var height: [:0]const u8 = "128";
 pub var watch = false;
+pub var args: std.process.ArgIterator = undefined;
 
 pub const CreateOptions = enum { script, project, norns_project, example };
 
-pub fn parse(location: []const u8) !?CreateOptions {
+pub fn parse(location: []const u8, allocator: std.mem.Allocator) !?CreateOptions {
     var double_dip = false;
     var list_examples = false;
-    var args = std.process.args();
-    defer args.deinit();
+    args = try std.process.argsWithAllocator(allocator);
     var i: u8 = 0;
     while (args.next()) |arg| : (i += 1) {
         if (i == 0) {
